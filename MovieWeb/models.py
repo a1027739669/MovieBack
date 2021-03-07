@@ -18,7 +18,7 @@ class Comment(models.Model):
     vote = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'comment'
 
 
@@ -27,7 +27,7 @@ class Genre(models.Model):
     genrename = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'genre'
 
 
@@ -51,7 +51,7 @@ class Movie(models.Model):
     vote = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'movie'
 
 
@@ -68,7 +68,7 @@ class Person(models.Model):
     sex = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'person'
 
 
@@ -80,7 +80,7 @@ class Rating(models.Model):
     userid = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'rating'
 
 
@@ -90,7 +90,8 @@ class User(models.Model):
     nickname = models.CharField(max_length=255, blank=True, null=True)
     password = models.CharField(max_length=255, blank=True, null=True)
     username = models.CharField(max_length=255, blank=True, null=True)
-
+    watchitems=models.TextField(blank=True, null=True)
+    preference=models.CharField(max_length=255, blank=True, null=True)
     class Meta:
-        managed = False
+        managed = True
         db_table = 'user'

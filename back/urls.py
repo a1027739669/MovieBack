@@ -18,5 +18,6 @@ from django.urls import path
 import MovieWeb.views as views
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',views.hello),
+    path('recommend/', views.iter_recommend),
+    path('setwatch/', views.set_watch),
 ]
