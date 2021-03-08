@@ -3,9 +3,9 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.core import serializers
 import simplejson
-
 import time
-from program import itemrec
+from program.itemrec import *
+from program.cbrec import *
 import multiprocessing
 from .models import *
 # Create your views here.
@@ -23,16 +23,14 @@ def iter_recommend(request):
     return HttpResponse(result)
 
 def set_watch(request):
-    i=1
-    ratings=Rating.objects.all()
-    for rating in ratings:
-        user=User.objects.get(userid=rating.userid)
-        user.watchitems+=str(rating.movieid)+'/'
-        user.save()
-        if(i%10000==0):
-            print(i)
-
-
+    # i=1
+    # ratings=Rating.objects.all()
+    # for rating in ratings:
+    #     user=User.objects.get(userid=rating.userid)
+    #     user.watchitems+=str(rating.movieid)+'/'
+    #     user.save()
+    #     if(i%10000==0):
+    #         print(i)
 
     # User.objects.all().update(watchitems='')
 
@@ -52,4 +50,8 @@ def set_watch(request):
     #     end=time.time()
     #     print(end-start)
     #     i+=1
+    cbrec=CBRec()
+    item=ItemBasedCF()
+    print(cbrec.recommend(1))
+    print(item.recommend(1))
     return HttpResponse("hello")

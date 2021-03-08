@@ -6,3 +6,5 @@ words='恐怖/奇幻/冒险'
 print(jieba.analyse.extract_tags(words,topK=20,withWeight=True))
 print(jieba.analyse.textrank(words))
 print(jieba.analyse.extract_tags(words2,topK=20,withWeight=True))
+test="fsf"
+print(test.split('/n')[0])

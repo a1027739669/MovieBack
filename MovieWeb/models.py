@@ -49,6 +49,7 @@ class Movie(models.Model):
     storyline = models.TextField(blank=True, null=True)
     tag = models.TextField(blank=True, null=True)
     vote = models.BigIntegerField(blank=True, null=True)
+    feature=models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -91,7 +92,23 @@ class User(models.Model):
     password = models.CharField(max_length=255, blank=True, null=True)
     username = models.CharField(max_length=255, blank=True, null=True)
     watchitems=models.TextField(blank=True, null=True)
-    preference=models.CharField(max_length=255, blank=True, null=True)
+    preference=models.TextField( blank=True, null=True)
     class Meta:
         managed = True
         db_table = 'user'
+
+class ItemSimilarity(models.Model):
+    movieid = models.BigIntegerField(primary_key=True)
+    itemsim=models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = True
+        db_table = 'itemsimilarity'
+
+class UserPreference(models.Model):
+    userid = models.BigIntegerField(primary_key=True)
+    userpre=models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = True
+        db_table = 'userpreference'
