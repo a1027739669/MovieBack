@@ -13,7 +13,7 @@ class Comment(models.Model):
     commenttime = models.CharField(max_length=255, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     movieid = models.BigIntegerField(blank=True, null=True)
-    rating = models.BigIntegerField(blank=True, null=True)
+    rating = models.FloatField(blank=True, null=True)
     userid = models.BigIntegerField(blank=True, null=True)
     vote = models.BigIntegerField(blank=True, null=True)
 
@@ -67,7 +67,7 @@ class Person(models.Model):
     namezh = models.TextField(blank=True, null=True)
     profession = models.TextField(blank=True, null=True)
     sex = models.CharField(max_length=255, blank=True, null=True)
-
+    img=models.TextField(blank=True, null=True)
     class Meta:
         managed = True
         db_table = 'person'

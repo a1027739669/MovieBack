@@ -16,8 +16,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 import MovieWeb.views as views
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.contrib import staticfiles
+from django.contrib.staticfiles.urls import static
+from . import settings
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('recommend/', views.iter_recommend),
-    path('setwatch/', views.set_watch),
+    path('', views.set_watch),
+    path('user/login/', views.user_login),
 ]
+urlpatterns += staticfiles_urlpatterns()
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

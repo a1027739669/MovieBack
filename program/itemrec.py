@@ -42,8 +42,8 @@ class ItemBasedCF:
             self.rectime.setdefault(rating.userid,{})
             self.train[rating.userid][rating.movieid]=rating.rating
             rectime=rating.ratingtime.split("\n")[0]
-            time.strptime(rectime, '%Y-%m-%d %H:%M')#将日期转换为时间戳
-            self.rectime[rating.userid][rating.movieid] =(time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M')))/(24*60*60)#将日期转换为时间戳
+            time.strptime(rectime, '%Y-%m-%d %H:%M:%S')#将日期转换为时间戳
+            self.rectime[rating.userid][rating.movieid] =(time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S')))/(24*60*60)#将日期转换为时间戳
         print('加载完成...')
 
 
@@ -110,10 +110,13 @@ class ItemBasedCF:
                         iratings.append(self.train[id][i]**2) #对i的评分
                         jratings.append(self.train[id][j]**2)  #对j的评分
                         uratings.append(self.train[id][i]*self.train[id][j]*(1/time_factor))
-                    itemsim_dict[j]=sum(uratings)/(math.sqrt(sum(iratings))*math.sqrt(sum(jratings)))
+                    if(math.sqrt(sum(iratings))*math.sqrt(sum(jratings))!=0):
+                        itemsim_dict[j]=sum(uratings)/(math.sqrt(sum(iratings))*math.sqrt(sum(jratings)))
+                    else:
+                        itemsim_dict[j]=-1
             itemsim_dict = dict(sorted(itemsim_dict.items(), key=lambda x: x[1], reverse=True))
             for key, value in itemsim_dict.items():
-                itemsim += str(key) + ':' + str(value) + '/'
+                itemsim.join([str(key) , ':' , str(value) , '/'])
             itemsimilarity = ItemSimilarity.objects.get(movieid=i)
             itemsimilarity.itemsim = itemsim
             itemsimilarity.save()
@@ -149,11 +152,13 @@ class ItemBasedCF:
         user = User.objects.get(userid=userid)
         result = {}
         ans = {}
-        item_ids = user.watchitems.split('/')[0:-1]  # 看过的电影
+        item_ids = user.watchitems.split('/')[0:-1] # 看过的电影
         for i in item_ids:
             result = [x.split(':') for x in ItemSimilarity.objects.get(movieid=i).itemsim.split('/')[0:self.k]]
             for x in result:
-                ans.setdefault(eval(x[0]), eval(x[1]))
+                if(x[0] in item_ids):
+                    continue
+                ans[x[0]]=x[1]
         return dict(sorted(ans.items(), key=operator.itemgetter(1), reverse=True)[0:self.n])
             # for j, similarity in sorted(self.W[i].items(), key=lambda x: x[1], reverse=True)[0:self.k]:
             #     if j not in watched_items:
