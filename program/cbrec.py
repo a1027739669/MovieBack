@@ -97,12 +97,7 @@ class CBRec():
         for movie in none_items:
             moviefeature =[eval(x.split(':')[1]) for x in movie.feature.split('/')[:-1]]
             Uia=sum(np.array(userpre)*np.array(moviefeature)) #用杰卡德相似系数
-            Ua=math.sqrt(sum([math.pow(one,2) for one in userpre]))
-            Ia=math.sqrt(sum([math.pow(one,2) for one in moviefeature]))
-            result.setdefault(movie.movieid,0.0)
-            if((Ua*Ia)==0):
-                continue
-            result[movie.movieid] = Uia / (Ua * Ia)
+            result.setdefault(movie.movieid,Uia)
         result=dict(sorted(result.items(),key=lambda x: x[1],reverse=True))#计算电影偏好排序结果
         ans=''
         for key,value in result.items():

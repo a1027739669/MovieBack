@@ -50,7 +50,7 @@ class Movie(models.Model):
     tag = models.TextField(blank=True, null=True)
     vote = models.BigIntegerField(blank=True, null=True)
     feature=models.TextField(blank=True, null=True)
-
+    localimg = models.TextField(blank=True, null=True)
     class Meta:
         managed = True
         db_table = 'movie'

@@ -76,30 +76,23 @@ def cou_ui():
 
     print('start')
     for userpre in userpres:
-        if userpre.userpre==None:
-            if(userpre.userid%1000==0):
-                print(userpre.userid)
-            result = {}
-            for movie_id in none_items[userpre.userid]:
-                Uia = sum(np.array(user_pre[userpre.userid]) * np.array(movid_ferture[movie_id]))  # 用杰卡德相似系数
-                Ua = math.sqrt(sum([math.pow(one, 2) for one in user_pre[userpre.userid]]))
-                Ia = math.sqrt(sum([math.pow(one, 2) for one in movid_ferture[movie_id]]))
-                result.setdefault(movie_id, 0.0)
-                if ((Ua * Ia) == 0):
-                    continue
-                result[movie_id] = Uia / (Ua * Ia)
+        if(userpre.userid%1000==0):
+            print(userpre.userid)
+        result = {}
+        for movie_id in none_items[userpre.userid]:
+            Uia = sum(np.array(user_pre[userpre.userid]) * np.array(movid_ferture[movie_id]))  # 用杰卡德相似系数
+            result.setdefault(movie_id, Uia)
             # result = dict(sorted(result.items(), key=lambda x: x[1], reverse=True))  # 计算电影偏好排序结果
-            ans = ''  # 用户偏好度 用字符串表示
-            for key, value in result.items():
-                ans.join([str(key),':',str(value),'/'])
-            userpre.userpre=ans
-            userpre.save()
+        ans = ''  # 用户偏好度 用字符串表示
+        for key, value in result.items():
+            ans.join([str(key),':',str(value),'/'])
+        userpre.userpre=ans
+        userpre.save()
 
 def download():
-    persons=Person.objects.all()
-    for person in persons:
-        if (person.img==None):
-            spi.download_image(person.personid)
+    movies=Movie.objects.all()
+    for movie in movies:
+        spi.download_image(movie.movieid)
 
 
 
