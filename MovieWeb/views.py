@@ -4,11 +4,13 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.core import serializers
 from django.forms.models import model_to_dict
-import simplejson
+import json
+from django.core.cache import cache
 import time
 from program.itemrec import *
 from program.cbrec import *
 from program import spi
+import random
 import multiprocessing
 from .models import *
 # Create your views here.
@@ -20,7 +22,6 @@ import os
 import numpy
 import imghdr
 import time
-from PIL import Image
 from MovieWeb.models import*
 headers = {
     'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
@@ -39,11 +40,11 @@ def iter_recommend(request):
     return HttpResponse(result)
 
 def set_watch(request):
-    download()
+    User.objects.all().update(password='123456789')
     return HttpResponse("hello")
 
 def user_login(request):
-    req=simplejson.loads(request.body)
+    req=json.loads(request.body)
     user=User.objects.filter(username=req['username'],password=req['password'])
     data={}
     if(not user.exists()):
@@ -52,7 +53,75 @@ def user_login(request):
     else:
         data['success']=True
         data['data']=model_to_dict(user[0])
-    return HttpResponse(simplejson.dumps(data))
+    return HttpResponse(json.dumps(data))
+
+#获取高评分电影
+def get_high_score_movies(request):
+    movies=list(Movie.objects.order_by('-score').values()[:10])
+    data={}
+    data['data']=movies
+    data['msg']='高评分电影'
+    return HttpResponse(json.dumps(data))
+
+#未登录进行随机推荐
+def get_recom_movies_unlogin(request):
+    movies=Movie.objects.all()
+    ids=random.sample(range(0,len(movies)),6)
+    res={}
+    data=[]
+    cur=0
+    for movie in movies:
+        if(cur in ids):
+            data.append(model_to_dict(movie))
+        cur += 1
+    res['data']=data
+    return HttpResponse(json.dumps(res))
+
+def searches_movies(request):
+    type=request.GET['type']
+    keywords=request.GET["keywords"]
+    print(keywords)
+    if(type==4):
+        pass
+
+    return HttpResponse("hello")
+
+def update_password(request):
+    user = User.objects.filter(username=request.GET['username'], password=request.GET['oldPassword'])
+    data = {}
+    if (not user.exists()):
+        data['success'] = False
+        data['error'] = '原密码错误!'
+    else:
+        data['success'] = True
+        user=user[0]
+        user.password=request.GET['newPassword']
+        user.save()
+    return HttpResponse(json.dumps(data))
+def get_movie_by_id(request):
+    res = {}
+    if(cache.has_key(request.GET['id'])):
+        movie=cache.get(request.GET['id'])
+    else:
+        movie=model_to_dict(Movie.objects.get(movieid=request.GET['id']))
+        comments = list(Comment.objects.filter(movieid=movie['movieid']).order_by('-commenttime').values())
+        for comment in comments:
+            comment['nickname']=User.objects.get(userid=comment['userid']).nickname
+        movie['shortPopComments']=comments
+        itemsimility=ItemSimilarity.objects.get(movieid=movie['movieid']).itemsim.split('/')[:10]
+        alsoLikeMovies=[]
+        for movie_id in itemsimility:
+            alsoLikeMovies.append(movie_id.split(':')[0])
+        movie['alsoLikeMovies']=alsoLikeMovies
+        cache.set(movie['movieid'],movie,60*60*24)
+    res['data']=movie
+    return HttpResponse(json.dumps(res))
+
+def get_movie_name_and_img_by_id(request):
+    movie = model_to_dict(Movie.objects.get(movieid=request.GET['id']))
+    res = {}
+    res['data'] = movie
+    return HttpResponse(json.dumps(res))
 
 def cou_ui():
     userpres=[x for x in UserPreference.objects.all()]

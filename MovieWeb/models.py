@@ -16,7 +16,6 @@ class Comment(models.Model):
     rating = models.FloatField(blank=True, null=True)
     userid = models.BigIntegerField(blank=True, null=True)
     vote = models.BigIntegerField(blank=True, null=True)
-
     class Meta:
         managed = True
         db_table = 'comment'
@@ -45,6 +44,7 @@ class Movie(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
     region = models.CharField(max_length=255, blank=True, null=True)
     relesetime = models.CharField(max_length=255, blank=True, null=True)
+    year= models.CharField(max_length=255, blank=True, null=True)
     score = models.FloatField()
     storyline = models.TextField(blank=True, null=True)
     tag = models.TextField(blank=True, null=True)

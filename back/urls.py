@@ -26,6 +26,12 @@ urlpatterns = [
     path('recommend/', views.iter_recommend),
     path('', views.set_watch),
     path('user/login/', views.user_login),
+    path('movies/highscoremovie/',views.get_high_score_movies),
+    path('movie/',views.get_movie_by_id),
+    path('movie/douban/',views.get_movie_name_and_img_by_id),
+    path('movies/unlogintoday/',views.get_recom_movies_unlogin),
+    path('searches/movies/',views.searches_movies),
+    path('accounts/password',views.update_password)
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
