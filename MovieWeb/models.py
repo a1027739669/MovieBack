@@ -13,9 +13,7 @@ class Comment(models.Model):
     commenttime = models.CharField(max_length=255, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     movieid = models.BigIntegerField(blank=True, null=True)
-    rating = models.FloatField(blank=True, null=True)
     userid = models.BigIntegerField(blank=True, null=True)
-    vote = models.BigIntegerField(blank=True, null=True)
     class Meta:
         managed = True
         db_table = 'comment'
@@ -23,11 +21,13 @@ class Comment(models.Model):
 
 class Genre(models.Model):
     id = models.BigIntegerField(primary_key=True)
-    genrename = models.CharField(max_length=255, blank=True, null=True)
+    genrename = models.CharField(max_length=255, blank=True, null=True,verbose_name='类型名')
 
     class Meta:
         managed = True
         db_table = 'genre'
+        verbose_name = '类型'  # 后台显示的表名
+        verbose_name_plural = '类型管理'  # 后台显示的表名复数 英语复数是加s 这里我们写死为 要显示的表名
 
 
 class Movie(models.Model):
@@ -51,6 +51,7 @@ class Movie(models.Model):
     vote = models.BigIntegerField(blank=True, null=True)
     feature=models.TextField(blank=True, null=True)
     localimg = models.TextField(blank=True, null=True)
+    all_score=models.BigIntegerField(blank=True,null=True)
     class Meta:
         managed = True
         db_table = 'movie'

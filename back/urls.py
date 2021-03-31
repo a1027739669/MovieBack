@@ -13,17 +13,21 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
 from django.urls import path
 import MovieWeb.views as views
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.contrib import staticfiles
 from django.contrib.staticfiles.urls import static
 from . import settings
+import xadmin
+from xadmin.plugins import xversion
+xversion.register_models()
+xadmin.autodiscover()
+
+
+
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('recommend/', views.iter_recommend),
+    path('admin/', xadmin.site.urls),
     path('', views.set_watch),
     path('user/login/', views.user_login),
     path('movies/highscoremovie/',views.get_high_score_movies),
@@ -31,7 +35,9 @@ urlpatterns = [
     path('movie/douban/',views.get_movie_name_and_img_by_id),
     path('movies/unlogintoday/',views.get_recom_movies_unlogin),
     path('searches/movies/',views.searches_movies),
-    path('accounts/password',views.update_password)
+    path('accounts/password',views.update_password),
+    path('movies/today/',views.get_recom_movies),
+    path('movies/rating/',views.submit_rating),
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

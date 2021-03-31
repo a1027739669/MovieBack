@@ -3,7 +3,6 @@ import time
 import numpy as np
 from MovieWeb.models import *
 class CBRec():
-    K=10
     def prepare_user_profile(self,userid):
         user=User.objects.get(userid=userid)
         item_ids=user.watchitems.split('/')[0:-1] #去除最后一个回车
@@ -30,7 +29,7 @@ class CBRec():
 
                             result += rating.rating *(((time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (
                                     24 * 60 * 60)) / max)
-            preference.join([str(genre.id) , ':' , str(result) , '/'])
+            preference+=str(genre.id)+':'+str(result)+'/'
         user.preference = preference
         user.save()
 
@@ -44,9 +43,9 @@ class CBRec():
         feature=''
         for genre in genres:
             if genre.genrename in movie_genres:
-                    feature.join([str(genre.id) , ':' , str(1.0/len(movie_genres)) , '/'])
+                feature+=str(genre.id)+':'+str(1.0/len(movie_genres))+'/'
             else:
-                feature.join([str(genre.id) , ':' + str(0) , '/'])
+                feature+=str(genre.id)+':'+str(0)+'/'
         movie.feature = feature
         movie.save()
 
@@ -83,7 +82,7 @@ class CBRec():
                                 ans = ((time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (
                                             24 * 60 * 60)) / max
                                 result += rating.rating * ans
-                preference.join([str(genre.id),':',str(result)])
+                preference+=str(genre.id)+':'+str(result)+'/'
             user.preference = preference
             user.save()
 
@@ -100,18 +99,56 @@ class CBRec():
             result.setdefault(movie.movieid,Uia)
         result=dict(sorted(result.items(),key=lambda x: x[1],reverse=True))#计算电影偏好排序结果
         ans=''
+        li=[]
         for key,value in result.items():
-            ans.join([str(key),':',str(value),'/'])
+            li.extend([str(key),':',str(value),'/'])
+        ans=ans.join(li)
         userpreference=UserPreference.objects.get(userid=userid)
         userpreference.userpre=ans
         userpreference.save()
 
     def recommend(self,userid):
-        result=[x.split(':') for x in UserPreference.objects.get(userid=userid).userpre.split('/')[0:self.K]]
+        result=[x.split(':') for x in UserPreference.objects.get(userid=userid).userpre.split('/')][:-1]
         ans={} #存储推荐结果，字典形式
         for x in result:
             ans[x[0]]=x[1] #转化为字典结果
         return ans
+
+    def cou_all_ui(self): #计算所有用户的偏好
+        userpres = [x for x in UserPreference.objects.all()]
+        user_pre = {}
+        itemids = {}
+        users = User.objects.all()
+        all_items = list(Movie.objects.values_list('movieid', flat=True))
+        none_items = {}
+        movie_dict = {}
+        movies = Movie.objects.all()
+        movid_ferture = {}
+        for movie in movies:
+            movid_ferture[movie.movieid] = [eval(x.split(':')[1]) for x in movie.feature.split('/')[:-1]]
+        for movie in movies:
+            movie_dict[movie.movieid] = movie
+        for user in users:
+            user_pre[user.userid] = [eval(x.split(':')[1]) for x in user.preference.split('/')[:-1]]
+            itemids[user.userid] = [eval(x) for x in user.watchitems.split('/')[0:-1]]
+        for user in users:
+            none_items[user.userid] = list(set(all_items) - set(itemids[user.userid]))
+
+        print('start')
+        for userpre in userpres:
+            if (userpre.userid % 1000 == 0):
+                print(userpre.userid)
+            result = {}
+            for movie_id in none_items[userpre.userid]:
+                Uia = sum(np.array(user_pre[userpre.userid]) * np.array(movid_ferture[movie_id]))  # 用杰卡德相似系数
+                result.setdefault(movie_id, Uia)
+            ans = ''  # 用户偏好度 用字符串表
+            li = []
+            for key, value in result.items():
+                li.extend([str(key), ':', str(value), '/'])
+            userpre.userpre = ans.join(li)
+            userpre.save()
+
 
 
 

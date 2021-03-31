@@ -12,8 +12,8 @@ class ItemBasedCF:
         self.data={}
         self.train = {}#训练集
         self.test = {}#测试集
-        self.k = 30 #最相似的K部电影
-        self.n = 10 #返回n个结果
+        self.k = 200 #最相似的K部电影
+        self.n = 50 #返回n个结果
         self.R={}#记录对电影i和j感兴趣的评分
         self.M=9
         self.ram=3
@@ -115,8 +115,10 @@ class ItemBasedCF:
                     else:
                         itemsim_dict[j]=-1
             itemsim_dict = dict(sorted(itemsim_dict.items(), key=lambda x: x[1], reverse=True))
+            li=[]
             for key, value in itemsim_dict.items():
-                itemsim.join([str(key) , ':' , str(value) , '/'])
+                li.extend([str(key) , ':' , str(value) , '/'])
+            itemsim=itemsim.join(li)
             itemsimilarity = ItemSimilarity.objects.get(movieid=i)
             itemsimilarity.itemsim = itemsim
             itemsimilarity.save()
