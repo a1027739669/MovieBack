@@ -9,14 +9,16 @@ from django.db import models
 
 
 class Comment(models.Model):
-    commentid = models.BigIntegerField(primary_key=True)
-    commenttime = models.CharField(max_length=255, blank=True, null=True)
-    content = models.TextField(blank=True, null=True)
-    movieid = models.BigIntegerField(blank=True, null=True)
-    userid = models.BigIntegerField(blank=True, null=True)
+    commentid = models.BigIntegerField(primary_key=True,verbose_name='id')
+    commenttime = models.CharField(max_length=255, blank=True, null=True,verbose_name='评论时间')
+    content = models.TextField(blank=True, null=True,verbose_name='评论内容')
+    movieid = models.BigIntegerField(blank=True, null=True,verbose_name='电影id')
+    userid = models.BigIntegerField(blank=True, null=True,verbose_name='用户id')
     class Meta:
         managed = True
         db_table = 'comment'
+        verbose_name = '评论'  # 后台显示的表名
+        verbose_name_plural = '评论管理'
 
 
 class Genre(models.Model):
@@ -52,6 +54,7 @@ class Movie(models.Model):
     feature=models.TextField(blank=True, null=True)
     localimg = models.TextField(blank=True, null=True)
     all_score=models.BigIntegerField(blank=True,null=True)
+    genreids = models.ManyToManyField(to=Genre, related_name="genre_movie", null=True, blank=True, default=None)
     class Meta:
         managed = True
         db_table = 'movie'
@@ -87,11 +90,11 @@ class Rating(models.Model):
 
 
 class User(models.Model):
-    userid = models.BigIntegerField(primary_key=True)
+    userid = models.BigIntegerField(primary_key=True,verbose_name='用户id')
     img = models.TextField(blank=True, null=True)
-    nickname = models.CharField(max_length=255, blank=True, null=True)
-    password = models.CharField(max_length=255, blank=True, null=True)
-    username = models.CharField(max_length=255, blank=True, null=True)
+    nickname = models.CharField(max_length=255, blank=True, null=True,verbose_name='用户昵称')
+    password = models.CharField(max_length=255, blank=True, null=True,verbose_name='用户密码')
+    username = models.CharField(max_length=255, blank=True, null=True,verbose_name='用户名')
     watchitems=models.TextField(blank=True, null=True)
     preference=models.TextField( blank=True, null=True)
     class Meta:

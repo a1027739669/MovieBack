@@ -38,6 +38,10 @@ urlpatterns = [
     path('accounts/password',views.update_password),
     path('movies/today/',views.get_recom_movies),
     path('movies/rating/',views.submit_rating),
+    path('movies/comment/',views.submit_comment),
+    path('movies/ratinglist/',views.get_rating_list),
+    path('movies/commentlist/',views.get_comment_list),
+    path('movies/deletecomment/',views.delete_comment)
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

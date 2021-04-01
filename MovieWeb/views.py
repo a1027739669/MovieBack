@@ -28,7 +28,6 @@ cbrec=CBRec()
 # itemBasedCF.similarity()
 
 def iter_recommend(id):
-    result={}
     result=itemBasedCF.recommend(id)
     return result
 
@@ -53,8 +52,9 @@ def set_watch(request):
     #     print(movie.movieid)
     # cou_sim_mutex()
 
-
-    return HttpResponse("hello")
+    print('yes')
+    comments= Comment.objects.all()[:20]
+    return HttpResponse('yes')
 
 def user_login(request):
     req=json.loads(request.body)
@@ -112,6 +112,9 @@ def get_recom_movies(request):
 
 def submit_rating(request): #提交用户评分
     userid=request.GET['userid']
+    if cache.has_key('ratinghistory' + str(userid)):
+        cache.delete('ratinghistory' + str(userid)) #更新了评分就移除缓存
+
     ratingvalue=request.GET['ratingvalue']
     movieid=request.GET['movieid']
     movie=Movie.objects.get(movieid=movieid)
@@ -138,6 +141,49 @@ def submit_rating(request): #提交用户评分
     movie.score = round(movie.all_score / movie.vote)
     movie.save()
     return HttpResponse("成功")
+
+def submit_comment(request):
+    movieid=request.GET['movieid']
+    commenttime=request.GET['commenttime']
+    content=request.GET['content']
+    userid=request.GET['userid']
+    comment=Comment(commenttime=commenttime,content=content,userid=userid,movieid=movieid)
+    comment.save()
+    if cache.has_key(movieid): #删除缓存
+        cache.delete(movieid)
+    if cache.has_key('commenthistory'+str(userid)):
+        cache.delete('commenthistory'+str(userid)) #删除缓存
+    return HttpResponse("hello")
+
+def get_rating_list(request):
+    userid=request.GET['userid']
+    res={}
+    if cache.has_key('ratinghistory'+str(userid)):
+        ratings=cache.get('ratinghistory'+str(userid))
+    else:
+        ratings = list(Rating.objects.filter(userid=userid).order_by('-ratingtime').values())
+        for rating in ratings:
+            rating['moviename'] = Movie.objects.get(movieid=rating['movieid']).name
+        cache.set('ratinghistory'+str(userid),ratings)
+    res['data'] = ratings
+    return HttpResponse(json.dumps(res))
+
+def get_comment_list(request):
+    userid=request.GET['userid']
+    res={}
+    if cache.has_key('commenthistory'+str(userid)):
+        comments=cache.get('commenthistory'+str(userid))
+    else:
+        comments = list(Comment.objects.filter(userid=userid).order_by('-commenttime').values())
+        for comment in comments:
+            comment['moviename'] = Movie.objects.get(movieid=comment['movieid']).name
+        cache.set('commenthistory'+str(userid),comments)
+    res['data'] = comments
+    return HttpResponse(json.dumps(res))
+
+def delete_comment(request):
+    print('hello')
+    return HttpResponse('hello')
 
 def searches_movies(request):
     type=request.GET['type']
