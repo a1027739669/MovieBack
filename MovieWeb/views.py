@@ -155,7 +155,7 @@ def submit_comment(request):
         cache.delete('commenthistory'+str(userid)) #删除缓存
     return HttpResponse("hello")
 
-def get_rating_list(request):
+def get_rating_list(request): #获取用户评分记录，即浏览记录
     userid=request.GET['userid']
     res={}
     if cache.has_key('ratinghistory'+str(userid)):
@@ -168,7 +168,7 @@ def get_rating_list(request):
     res['data'] = ratings
     return HttpResponse(json.dumps(res))
 
-def get_comment_list(request):
+def get_comment_list(request): #获取用户评论记录
     userid=request.GET['userid']
     res={}
     if cache.has_key('commenthistory'+str(userid)):
@@ -181,9 +181,23 @@ def get_comment_list(request):
     res['data'] = comments
     return HttpResponse(json.dumps(res))
 
-def delete_comment(request):
-    print('hello')
-    return HttpResponse('hello')
+def delete_comment(request): #用户删除一条评论
+    commentid=request.GET['commentid']
+    comment=Comment.objects.get(commentid=commentid) #获取评论
+    movie=Movie.objects.get(movieid=comment.movieid) #获取评论相关联的电影
+    user=User.objects.get(userid=comment.userid) #获取评论相关联的用户
+    comment.delete()
+    if cache.has_key(movie.movieid): #删除缓存
+        cache.delete(movie.movieid)
+    comments=cache.get('commenthistory'+str(user.userid)) #获取缓存准备更新
+    for comment in comments:
+        if str(comment['commentid'])==str(commentid):
+            comments.remove(comment) #移除删除的评论
+            break
+    cache.set('commenthistory' + str(user.userid), comments) #重新设置缓存
+    res={}
+    res['data']=comments
+    return HttpResponse(json.dumps(res))
 
 def searches_movies(request):
     type=request.GET['type']
