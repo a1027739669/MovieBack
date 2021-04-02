@@ -135,6 +135,7 @@ CACHES = {
 
 
 
+
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
@@ -175,3 +176,10 @@ STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+EMAIL_USE_SSL = True
+EMAIL_HOST = 'smtp.qq.com'
+EMAIL_PORT = 465
+EMAIL_HOST_USER = '1027739669@qq.com' # 帐号
+EMAIL_HOST_PASSWORD = 'qitynbvkxqgvbejf'  #授权码
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

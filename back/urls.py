@@ -41,7 +41,11 @@ urlpatterns = [
     path('movies/comment/',views.submit_comment),
     path('movies/ratinglist/',views.get_rating_list),
     path('movies/commentlist/',views.get_comment_list),
-    path('movies/deletecomment/',views.delete_comment)
+    path('movies/deletecomment/',views.delete_comment),
+    path('email',views.send_email),
+    path('authentication/account',views.register),
+    path('movies/search',views.searches_movie_by_keyword),
+    path('movies/alsolike',views.get_also_like)
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

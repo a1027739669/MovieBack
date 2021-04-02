@@ -24,7 +24,7 @@ class GenreAdmin(object):
     ordering = ('id','genrename',)
     readonly_fields = ('id',)
     list_per_page = 20
-
+    # object_list_template = "comment.html"
     def save_models(self):
         obj=self.new_obj
         if obj.id !=None:
