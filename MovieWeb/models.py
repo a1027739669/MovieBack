@@ -97,9 +97,13 @@ class User(models.Model):
     username = models.CharField(max_length=255, blank=True, null=True,verbose_name='用户名')
     watchitems=models.TextField(blank=True, null=True)
     preference=models.TextField( blank=True, null=True)
+    local=models.CharField(max_length=255,blank=True,null=True)
+    selfnote=models.TextField(blank=True,null=True)
     class Meta:
         managed = True
         db_table = 'user'
+        verbose_name = '用户'  # 后台显示的表名
+        verbose_name_plural = '用户管理'
 
 class ItemSimilarity(models.Model):
     movieid = models.BigIntegerField(primary_key=True)
@@ -116,3 +120,15 @@ class UserPreference(models.Model):
     class Meta:
         managed = True
         db_table = 'userpreference'
+
+class ChatRecord(models.Model):
+    chatid=models.BigIntegerField(primary_key=True)
+    uid=models.BigIntegerField(blank=True, null=True)
+    nickname = models.CharField(max_length=255, blank=True, null=True, verbose_name='用户昵称')
+    msg = models.TextField(blank=True, null=True)
+    img=models.TextField(blank=True, null=True)
+    type=models.BigIntegerField(blank=True, null=True)
+    chattime = models.CharField(max_length=255, blank=True, null=True)
+    class Meta:
+        managed = True
+        db_table = 'chatrecord'

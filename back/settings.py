@@ -60,7 +60,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ORIGIN_WHITELIST = (
 #   '*'
 # )
-
+INTERNAL_IPS = ['127.0.0.1']
 CORS_ALLOW_METHODS = (
     'DELETE',
     'GET',

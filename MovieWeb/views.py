@@ -1,15 +1,11 @@
-from django.db import transaction
+import uuid
+
 from django.db.models import Q
-from django.shortcuts import render
 from back import settings
 from django.http import HttpResponse
-from django.http import JsonResponse
-from django.core import serializers
 from django.forms.models import model_to_dict
-import json
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.cache import cache
-import time
 from program.itemrec import *
 from program.cbrec import *
 from program import spi
@@ -20,6 +16,8 @@ from .models import *
 from MovieWeb.models import *
 from django.core.mail import send_mail
 
+local_file_url = 'http://127.0.0.1:8000/media/'
+local_file_path = 'C:/Users/Komorebi/Desktop/back/media/'
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
 }
@@ -76,7 +74,7 @@ def send_email(request):
     return HttpResponse(json.dumps(res))
 
 
-def register(request):
+def register(request):  # 注册
     req = json.loads(request.body)
     code = cache.get('code' + req['email'])
     verification = req['verification']
@@ -95,30 +93,29 @@ def register(request):
 
 
 def set_watch(request):
-    # movies=Movie.objects.all()
-    # for movie in movies:
-    #     cou=0
-    #     all_score=0
-    #     ratings=Rating.objects.filter(movieid=movie.movieid)
-    #     for rating in ratings:
-    #         cou+=1
-    #         all_score+=int(rating.rating)
-    #     if cou==0:
-    #         movie.score=0
-    #         movie.all_score=all_score
-    #         movie.vote=0
-    #     else:
-    #         movie.score=round(all_score/cou,1)
-    #         movie.all_score=all_score
-    #         movie.vote=cou
-    #     movie.save()
-    #     print(movie.movieid)
-    # cou_sim_mutex()
-
-    # print('yes')
-    # comments= Comment.objects.all()[:20]
-
     return HttpResponse('测试邮件已发出请注意查收')
+
+
+def upload_user_img(request):
+    img = request.FILES.get('file')
+    img_name = str(uuid.uuid1())
+    img_path = local_file_path + 'profile/' + img_name + '.jpg'
+    with open(img_path, 'wb') as f:
+        for chunk in img.chunks():
+            f.write(chunk)
+    res = {}
+    res['url'] = local_file_url + 'profile/' + img_name + '.jpg'
+    return HttpResponse(json.dumps(res))
+
+
+def sava_user_img_to_db(request):
+    user = User.objects.get(userid=request.GET['userid'])
+    url = request.GET['url']
+    user.img = url
+    user.save()
+    res = {}
+    res['userimg'] = url
+    return HttpResponse(json.dumps(res))
 
 
 def user_login(request):
@@ -142,7 +139,11 @@ def get_high_score_movies(request):
     res['msg'] = '高评分电影'
     return HttpResponse(json.dumps(res))
 
-
+def get_persons(request):
+    persons = list(Person.objects.order_by('personid').values()[:10])
+    res = {}
+    res['data'] = persons
+    return HttpResponse(json.dumps(res))
 # 未登录进行随机推荐
 def get_recom_movies_unlogin(request):
     movies = Movie.objects.all()
@@ -205,16 +206,26 @@ def get_movie_by_id(request):
     res['data'] = movie
     return HttpResponse(json.dumps(res))
 
+def get_person_by_id(request):
+    res = {}
+    person = model_to_dict(Person.objects.get(personid=request.GET['id']))
+    parMovies = []
+    movies=Movie.objects.filter(Q(actors__icontains=person['name'])|Q(director__icontains=person['name']))
+    for movie in movies:
+        parMovies.append(movie.movieid)
+    person['parMovies'] = parMovies
+    res['data'] = person
+    return HttpResponse(json.dumps(res))
 
 def get_also_like(request):
     page = int(request.GET['page'])
     movie = cache.get(request.GET['movieid'])
-    itemsimility = ItemSimilarity.objects.get(movieid=movie['movieid']).itemsim.split('/')[page*10:page*10+10]
+    itemsimility = ItemSimilarity.objects.get(movieid=movie['movieid']).itemsim.split('/')[page * 10:page * 10 + 10]
     alsoLikeMovies = []
     for movie_id in itemsimility:
         alsoLikeMovies.append(movie_id.split(':')[0])
-    res={}
-    res['alsoLikeMovies']=alsoLikeMovies
+    res = {}
+    res['alsoLikeMovies'] = alsoLikeMovies
     return HttpResponse(json.dumps(res))
 
 
@@ -314,7 +325,6 @@ def delete_comment(request):  # 用户删除一条评论
 
 def searches_movies(request):
     keywords = request.GET["keywords"]
-    print(keywords)
     limit = request.GET["limit"]
     offset = request.GET["offset"]
     sort = request.GET['sort']
@@ -357,7 +367,24 @@ def searches_movie_by_keyword(request):
         res['data'] = data
     return HttpResponse(json.dumps(res))
 
-
+def searches_person_by_keyword(request):
+    keywords = request.GET["keywords"]
+    limit = request.GET["limit"]
+    offset = request.GET["offset"]
+    res = {}
+    # 全字段模糊查询
+    persons = Person.objects.filter(Q(name__icontains=keywords)|Q(birthday__icontains=keywords) | Q(birthplace__icontains=keywords) | Q(
+        blog__icontains=keywords) | Q(constellation__icontains=keywords) | Q(
+        nameen__icontains=keywords) | Q(namezh__icontains=keywords) | Q(profession__icontains=keywords) | Q(
+        sex__icontains=keywords)).order_by('-personid')
+    paginator = Paginator(persons, limit)
+    data = list(paginator.page(int(offset) / int(limit) + 1).object_list.values())
+    if len(data) == 0:
+        res['success'] = False
+        res['error'] = '无符合条件的数据!'
+    else:
+        res['data'] = data
+    return HttpResponse(json.dumps(res))
 def update_password(request):
     user = User.objects.filter(username=request.GET['username'], password=request.GET['oldPassword'])
     data = {}
@@ -379,13 +406,43 @@ def get_movie_name_and_img_by_id(request):
     return HttpResponse(json.dumps(res))
 
 
+def update_user_profile(request):
+    req = json.loads(request.body)
+    user = User.objects.get(userid=req['userid'])
+    user.img = req['img']
+    user.local = req['local']
+    user.selfnote = req['selfnote']
+    user.nickname = req['nickname']
+    user.save()
+    res = {}
+    res['success'] = True
+    return HttpResponse(json.dumps(res))
+
+
 def download():
     movies = Movie.objects.all()
     for movie in movies:
         spi.download_image(movie.movieid)
 
-
+def save_message(request):
+    req=json.loads(request.body)
+    now_time=datetime.datetime.now().strftime("%Y-%m-%d")
+    chatrecord=ChatRecord(uid=req['userid'],nickname=req['nickname'],msg=req['content'],img=req['img'],type=req['type'],chattime=now_time)
+    chatrecord.save()
+    res={}
+    res['success']=True
+    return HttpResponse(json.dumps(res))
+def get_meaaage(request):
+    cur_date = datetime.datetime.now().date()
+    week = cur_date - datetime.timedelta(weeks=1)
+    res={}
+    # 查询前一周数据,也可以用range,我用的是glt,lte大于等于
+    obj_list = list(ChatRecord.objects.filter(chattime__gte=week, chattime__lte=cur_date).values())
+    res['messageList']=obj_list
+    return HttpResponse(json.dumps(res))
 def cou_sim_mutex():
     itemBasedCF.load_data()
     itemBasedCF.data_transfer()
     itemBasedCF.similarity()
+
+
