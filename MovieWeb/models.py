@@ -97,8 +97,8 @@ class User(models.Model):
     username = models.CharField(max_length=255, blank=True, null=True,verbose_name='用户名')
     watchitems=models.TextField(blank=True, null=True)
     preference=models.TextField( blank=True, null=True)
-    local=models.CharField(max_length=255,blank=True,null=True)
-    selfnote=models.TextField(blank=True,null=True)
+    local=models.CharField(max_length=255,blank=True,null=True,verbose_name='用户所在地')
+    selfnote=models.TextField(blank=True,null=True,verbose_name='个性签名')
     class Meta:
         managed = True
         db_table = 'user'

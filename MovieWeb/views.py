@@ -89,12 +89,25 @@ def register(request):  # 注册
         user.save()
         res['success'] = True
         cache.delete('code' + req['email'])
+        cache.set('userslen',int(cache.get('userslen'))+1)
+        if not UserPreference.objects.filter(userid=user.userid).exists():
+            userpreference = UserPreference(userid=user.userid)
+            userpreference.save()
+
     return HttpResponse(json.dumps(res))
 
 
 def set_watch(request):
     return HttpResponse('测试邮件已发出请注意查收')
 
+def get_cur_movies(request):
+    movies=Movie.objects.all().order_by('-year')[:3]
+    data=[]
+    for movie in movies:
+        data.append(model_to_dict(movie))
+    res={}
+    res['data']=data
+    return HttpResponse(json.dumps(res))
 
 def upload_user_img(request):
     img = request.FILES.get('file')
@@ -202,6 +215,14 @@ def get_movie_by_id(request):
         for movie_id in itemsimility:
             alsoLikeMovies.append(movie_id.split(':')[0])
         movie['alsoLikeMovies'] = alsoLikeMovies
+        movie_actor=[]
+        if movie['actorid']!=None:
+            actors=movie['actorid'].split("|")
+            for actor in actors:
+                actorli=actor.split(':')
+                x={'actorname':actorli[0],'actorid':actorli[1]}
+                movie_actor.append(x)
+        movie['actor_li']=movie_actor
         cache.set(movie['movieid'], movie, 60 * 60 * 24)
     res['data'] = movie
     return HttpResponse(json.dumps(res))
@@ -273,6 +294,7 @@ def submit_comment(request):
         cache.delete(movieid)
     if cache.has_key('commenthistory' + str(userid)):
         cache.delete('commenthistory' + str(userid))  # 删除缓存
+    cache.set('commentslen', int(cache.get('commentslen')) + 1)
     return HttpResponse("hello")
 
 
@@ -320,6 +342,7 @@ def delete_comment(request):  # 用户删除一条评论
     cache.set('commenthistory' + str(user.userid), comments)  # 重新设置缓存
     res = {}
     res['data'] = comments
+    cache.set('commentslen', int(cache.get('commentslen')) -1)
     return HttpResponse(json.dumps(res))
 
 
@@ -436,7 +459,7 @@ def get_meaaage(request):
     cur_date = datetime.datetime.now().date()
     week = cur_date - datetime.timedelta(weeks=1)
     res={}
-    # 查询前一周数据,也可以用range,我用的是glt,lte大于等于
+    # 查询前一周数据
     obj_list = list(ChatRecord.objects.filter(chattime__gte=week, chattime__lte=cur_date).values())
     res['messageList']=obj_list
     return HttpResponse(json.dumps(res))
@@ -444,5 +467,8 @@ def cou_sim_mutex():
     itemBasedCF.load_data()
     itemBasedCF.data_transfer()
     itemBasedCF.similarity()
+
+def cou_user_movie_feature():
+    pass
 
 

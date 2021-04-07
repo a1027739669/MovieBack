@@ -7,7 +7,12 @@ from .models import *
 # Register your models here.
 class UserLargeTablePaginator(Paginator):
     def _get_count(self):
-        return 1400000
+        return int(cache.get('userslen'))
+    count = property(_get_count)
+
+class CommentLargeTablePaginator(Paginator):
+    def _get_count(self):
+        return int(cache.get('commentslen'))
     count = property(_get_count)
 
 
@@ -24,7 +29,6 @@ class GlobalSettings(object):
 class GenreAdmin(object):
     list_display = ['id','genrename']
     search_fields = ['id','genrename']
-    list_editable = ['genrename']
     list_display_links = ('id','genrename')
     ordering = ('id','genrename',)
     readonly_fields = ('id',)
@@ -52,32 +56,53 @@ class UserAdmin(object):
     list_display = ['userid','nickname','username','password','local','selfnote']
     search_fields = ['userid','nickname','username','password','local','selfnote']
     list_editable = ['nickname','password','local','selfnote']
-    list_display_links = ('userid','nickname','username','password','local','selfnote')
-    # ordering = ('userid','nickname','username','password','local','selfnote',)
-    # readonly_fields = ('userid','nickname','username','password','local','selfnote')
+    list_display_links = ('userid','nickname','username','password','local','selfnote',)
+    ordering = ('userid','nickname','username','password','local','selfnote',)
+    readonly_fields = ('userid','username','watchitems','preference',)
     list_per_page = 20
     paginator_class=UserLargeTablePaginator
-    # object_list_template = "comment.html"
-    # def save_models(self):
-    #     obj=self.new_obj
-    #     if obj.id !=None:
-    #         genre=Genre.objects.get(id=obj.id)
-    #         movies=Movie.objects.filter(genre__icontains=genre.genrename)
-    #         for movie in movies:
-    #             newgenre=str(movie.genre).replace(genre.genrename,obj.genrename)
-    #             movie.genre=newgenre
-    #             movie.save()
-    #         obj.save()
-    #     else:
-    #         obj.save()
-    #
-    def has_delete_permission(self, request=None):
-        # Disable delete
+
+    def has_add_permission(self, request=None):
         return False
     class Meta:
         verbose_name='用户'
+
+
+class CommentAdmin(object):
+    list_display = ['commentid', 'commenttime', 'content', 'movieid', 'userid']
+    search_fields = ['commentid', 'commenttime', 'content', 'movieid', 'userid']
+    list_editable = [ 'content']
+    list_display_links = ('commentid', 'commenttime', 'content', 'movieid', 'userid',)
+    ordering = ('commentid', 'commenttime', 'content', 'movieid', 'userid',)
+    readonly_fields = ('commentid', 'commenttime', 'movieid', 'userid',)
+    list_per_page = 20
+    paginator_class = CommentLargeTablePaginator
+
+    def delete_model(self):
+        comment=self.obj
+        commentid=comment.commentid
+        movie = Movie.objects.get(movieid=comment.movieid)  # 获取评论相关联的电影
+        user = User.objects.get(userid=comment.userid)  # 获取评论相关联的用户
+        comment.delete()
+        if cache.has_key(movie.movieid):  # 删除缓存
+            cache.delete(movie.movieid)
+        comments = cache.get('commenthistory' + str(user.userid))  # 获取缓存准备更新
+        for comment in comments:
+            if str(comment['commentid']) == str(commentid):
+                comments.remove(comment)  # 移除删除的评论
+                break
+        cache.set('commenthistory' + str(user.userid), comments)  # 重新设置缓存
+        res = {}
+        res['data'] = comments
+        cache.set('commentslen', int(cache.get('commentslen')) - 1)
+    def has_add_permission(self, request=None):
+        return False
+
+    class Meta:
+        verbose_name = '评论'
 
 xadmin.site.register(views.BaseAdminView, BaseSetting)
 xadmin.site.register(views.CommAdminView, GlobalSettings)
 xadmin.site.register(Genre,GenreAdmin)
 xadmin.site.register(User,UserAdmin)
+xadmin.site.register(Comment,CommentAdmin)
