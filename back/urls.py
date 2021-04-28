@@ -55,6 +55,8 @@ urlpatterns = [
     path('message/save/',views.save_message),
     path('message/get',views.get_meaaage),
     path('movies/curmovies',views.get_cur_movies),
+    path('movie/staytime',views.cou_stay_time),
+    path('movies/favorite',views.get_favorite),
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

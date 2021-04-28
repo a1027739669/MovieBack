@@ -3,19 +3,24 @@ import time
 import numpy as np
 from MovieWeb.models import *
 
-
 class CBRec():
     def prepare_user_profile(self, userid):
         user = User.objects.get(userid=userid)
-        item_ids = user.watchitems.split('/')[0:-1]  # 去除最后一个回车
+        item_ids=[rating.movieid for rating in Rating.objects.filter(userid=userid)]
+        item_ids.extend([rating.movieid for rating in StayRating.objects.filter(userid=userid)])
         items = Movie.objects.in_bulk(item_ids).values()
         ratings = Rating.objects.filter(userid=userid)
+        stayratings=StayRating.objects.filter(userid=userid)
         preference = ''
-        li = []
         genres = Genre.objects.all()
         max = -1
         for rating in ratings:
             rectime = rating.ratingtime.split("\n")[0]
+            time.strptime(rectime, '%Y-%m-%d %H:%M:%S')
+            if (max < (time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (24 * 60 * 60)):
+                max = (time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (24 * 60 * 60)
+        for stayrating in stayratings:
+            rectime = stayrating.ratingtime.split("\n")[0]
             time.strptime(rectime, '%Y-%m-%d %H:%M:%S')
             if (max < (time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (24 * 60 * 60)):
                 max = (time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (24 * 60 * 60)
@@ -31,6 +36,12 @@ class CBRec():
                             time.strptime(rectime, '%Y-%m-%d %H:%M:%S')
 
                             result += rating.rating * (((time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (
+                                    24 * 60 * 60)) / max)
+                    for stayrating in stayratings:
+                        if stayrating.movieid == item.movieid:
+                            rectime = stayrating.ratingtime.split("\n")[0]
+                            time.strptime(rectime, '%Y-%m-%d %H:%M:%S')
+                            result += stayrating.rating * (((time.mktime(time.strptime(rectime, '%Y-%m-%d %H:%M:%S'))) / (
                                     24 * 60 * 60)) / max)
             preference += str(genre.id) + ':' + str(result) + '/'
         user.preference = preference
