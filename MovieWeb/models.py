@@ -38,8 +38,7 @@ class Genre(models.Model):
 class Person(models.Model):
     personid = models.BigIntegerField(primary_key=True, verbose_name='id')
     name = models.TextField(blank=True, null=True,verbose_name='姓名')
-    nameen = models.TextField(blank=True, null=True,verbose_name='中文名')
-    namezh = models.TextField(blank=True, null=True,verbose_name='英文名')
+    nameen = models.TextField(blank=True, null=True,verbose_name='英文名')
     birthday = models.CharField(max_length=255,blank=True, null=True,verbose_name='生日')
     birthplace = models.CharField(max_length=255, blank=True, null=True,verbose_name='出生地')
     blog = models.TextField(blank=True, null=True,verbose_name='个人简介')
@@ -84,8 +83,8 @@ class Movie(models.Model):
     feature=models.TextField(blank=True, null=True,verbose_name='特征')
     localimg = models.TextField(blank=True, null=True,verbose_name='图片')
     all_score=models.BigIntegerField(blank=True,null=True,verbose_name='总得分')
-    genreids = models.ManyToManyField(to=Genre, related_name="genre_movie", null=True, blank=True, default=None,verbose_name='类型id')
-    persons = models.ManyToManyField(to=Person, related_name="person_movie", null=True, blank=True, default=None,verbose_name='演员')
+    # genreids = models.ManyToManyField(to=Genre, related_name="genre_movie", null=True, blank=True, default=None,verbose_name='类型id')
+    # persons = models.ManyToManyField(to=Person, related_name="person_movie", null=True, blank=True, default=None,verbose_name='演员')
     imgfile = models.ImageField(blank=True, null=True, upload_to='moviecover/')
 
 
@@ -121,7 +120,7 @@ class StayRating(models.Model):
     rating = models.FloatField(blank=True, null=True)
     ratingtime = models.CharField(max_length=255, blank=True, null=True)
     userid = models.BigIntegerField(blank=True, null=True)
-
+    favoriteid=models.BigIntegerField(default=0)
     class Meta:
         managed = True
         db_table = 'stayrating'

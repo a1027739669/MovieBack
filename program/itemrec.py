@@ -16,6 +16,9 @@ class ItemBasedCF:
         self.ram=3
         self.seed=47
         self.rectime={} #对电影评价时间
+
+
+
     def load_data(self):
         """
         加载数据
@@ -40,7 +43,6 @@ class ItemBasedCF:
             for i in range(len(ratings)):
                 rating=ratings[i]-total/len(ratings)  #归一化评分
                 self.train[userid][items[i]]=rating
-
     def similarity(self):
         """
         计算相似度函数

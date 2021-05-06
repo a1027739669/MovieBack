@@ -56,7 +56,13 @@ urlpatterns = [
     path('message/get',views.get_meaaage),
     path('movies/curmovies',views.get_cur_movies),
     path('movie/staytime',views.cou_stay_time),
-    path('movies/favorite',views.get_favorite),
+    path('user/favorite/',views.get_favorite),
+    path('movie/addtofavorite/',views.add_movie_to_favorite),
+    path('user/newfavorite/',views.new_favorite),
+    path('movie/getfavoritemovies/',views.get_favorite_movies),
+    path('movie/delfavorite/',views.delete_favorite),
+    path('user/updatefavorite/',views.update_favorite),
+    path('movie/delfavoritemovie/',views.del_collect_movie)
 ]
 urlpatterns += staticfiles_urlpatterns()
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

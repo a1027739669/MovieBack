@@ -2,12 +2,13 @@ import uuid
 import json
 from django.db.models import Q
 from back import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.forms.models import model_to_dict
 from django.core.paginator import Paginator
 from django.core.cache import cache
 from program.itemrec import *
 from program.cbrec import *
+from django.core.serializers import serialize, deserialize
 from program import spi
 import random
 import datetime
@@ -15,6 +16,7 @@ import datetime
 from MovieWeb.models import *
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password, check_password
+
 local_file_url = 'http://127.0.0.1:8000/media/'
 local_file_path = 'C:/Users/Komorebi/Desktop/back/media/'
 headers = {
@@ -36,23 +38,6 @@ class CustomEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(CustomEncoder, self).default(obj)
-
-def generate_verification_code(isnum):
-    ''' 随机生成6位的验证码 '''
-    code_list = []
-    if isnum == True:
-        for i in range(10):  # 0-9数字
-            code_list.append(str(i))
-    else:
-        for i in range(10):  # 0-9数字
-            code_list.append(str(i))
-        for i in range(65, 91):  # A-Z
-            code_list.append(chr(i))
-        for i in range(97, 123):  # a-z
-            code_list.append(chr(i))
-    myslice = random.sample(code_list, 6)  # 从list中随机获取6个元素，作为一个片断返回
-    verification_code = ''.join(myslice)  # list to string
-    return verification_code
 
 
 def iter_recommend(id):
@@ -100,23 +85,118 @@ def register(request):  # 注册
         user.save()
         res['success'] = True
         cache.delete('code' + req['email'])
-        cache.set('userslen', int(cache.get('userslen')) + 1,60*60*24*365)
+        cache.set('userslen', int(cache.get('userslen')) + 1, 60 * 60 * 24 * 365)
 
+    return HttpResponse(json.dumps(res))
+
+
+def generate_verification_code(isnum):
+    ''' 随机生成6位的验证码 '''
+    code_list = []
+    if isnum == True:
+        for i in range(10):  # 0-9数字
+            code_list.append(str(i))
+    else:
+        for i in range(10):  # 0-9数字
+            code_list.append(str(i))
+        for i in range(65, 91):  # A-Z
+            code_list.append(chr(i))
+        for i in range(97, 123):  # a-z
+            code_list.append(chr(i))
+    myslice = random.sample(code_list, 6)  # 从list中随机获取6个元素，作为一个片断返回
+    verification_code = ''.join(myslice)  # list to string
+    return verification_code
+
+
+def user_login(request):
+    req = json.loads(request.body)
+    user = User.objects.filter(username=req['username'], password=req['password'])
+    res = {}
+    if (not user.exists()):
+        res['success'] = False
+        res['error'] = '用户名或密码错误!'
+    else:
+        res['success'] = True
+        if not UserPreference.objects.filter(userid=user[0].userid).exists():
+            userpreference = UserPreference(userid=user[0].userid)
+            userpreference.save()
+        res['data'] = model_to_dict(user[0])
     return HttpResponse(json.dumps(res))
 
 
 def set_watch(request):
-    # users=User.objects.all()
-    # for user in users:
-    #     favorite = Favorite(userid=user.userid,favoritename='默认收藏夹')
-    #     favorite.save()
-    return HttpResponse('gello')
+    return HttpResponse('hello')
+
 
 def get_favorite(request):
-    userid=request.GET['userid']
-    res={}
-    res['favorites']=list(Favorite.objects.filter(userid=userid).values())
+    userid = request.GET['userid']
+    favorites = list(Favorite.objects.filter(userid=userid).values())
+    res = {}
+    res['favorites'] = favorites
+    res['first'] = favorites[0]
+    movieids = CollectMovie.objects.filter(favoriteid=favorites[0]['favoriteid'])
+    movies = []
+    for item in movieids:
+        movies.append(change_movie(model_to_dict(Movie.objects.get(movieid=item.movieid))))
+    res['movies'] = movies
     return HttpResponse(json.dumps(res))
+
+
+def get_favorite_movies(request):
+    favorite = Favorite.objects.get(favoriteid=request.GET['favoriteid'])
+    movieids = CollectMovie.objects.filter(favoriteid=favorite.favoriteid)
+    movies = []
+    for item in movieids:
+        movies.append(change_movie(model_to_dict(Movie.objects.get(movieid=item.movieid))))
+    res = {}
+    res['favorite'] = model_to_dict(favorite)
+    res['movies'] = movies
+    return HttpResponse(json.dumps(res))
+
+
+def new_favorite(request):
+    favoriteid = int(round(time.time() * 1000))
+    userid = request.GET["userid"]
+    favoritename = request.GET["favoritename"]
+    favorite = Favorite(favoriteid=favoriteid, favoritename=favoritename, userid=userid)
+    favorite.save()
+    res = {}
+    res['favoriteid'] = favoriteid
+    return HttpResponse(json.dumps(res))
+
+
+def update_favorite(request):
+    favoriteid = request.GET["favoriteid"]
+    favoritename = request.GET["favoritename"]
+    favorite = Favorite.objects.get(favoriteid=favoriteid)
+    favorite.favoritename = favoritename
+    favorite.save()
+    res = {}
+    res['success'] = True
+    return HttpResponse(json.dumps(res))
+
+
+def delete_favorite(request):
+    favoriteid = request.GET['favoriteid']
+    Favorite.objects.filter(favoriteid=favoriteid).delete()
+    CollectMovie.objects.filter(favoriteid=favoriteid).delete()
+    StayRating.objects.filter(favoriteid=favoriteid).delete()
+    res = {}
+    res['success'] = True
+    return HttpResponse(json.dumps(res))
+
+
+def add_movie_to_favorite(request):
+    favoriteid = request.GET["favoriteid"]
+    movieid = request.GET["movieid"]
+    if not CollectMovie.objects.filter(favoriteid=favoriteid, movieid=movieid).exists():
+        collectmovie = CollectMovie(movieid=movieid, favoriteid=favoriteid)
+        collectmovie.save()
+    res = {}
+    res['success'] = True
+    return HttpResponse(json.dumps(res))
+
+
 def get_cur_movies(request):
     movies = Movie.objects.all().order_by('-relesetime')[:3]
     data = []
@@ -149,19 +229,78 @@ def sava_user_img_to_db(request):
     return HttpResponse(json.dumps(res))
 
 
-def user_login(request):
-    req = json.loads(request.body)
-    user = User.objects.filter(username=req['username'], password=req['password'])
-    res = {}
+def update_password(request):
+    user = User.objects.filter(username=request.GET['username'], password=request.GET['oldPassword'])
+    data = {}
     if (not user.exists()):
-        res['success'] = False
-        res['error'] = '用户名或密码错误!'
+        data['success'] = False
+        data['error'] = '原密码错误!'
     else:
-        res['success'] = True
-        if not UserPreference.objects.filter(userid=user[0].userid).exists():
-            userpreference = UserPreference(userid=user[0].userid)
-            userpreference.save()
-        res['data'] = model_to_dict(user[0])
+        data['success'] = True
+        user = user[0]
+        user.password = request.GET['newPassword']
+        user.save()
+    return HttpResponse(json.dumps(data))
+
+
+def update_user_profile(request):
+    req = json.loads(request.body)
+    user = User.objects.get(userid=req['userid'])
+    user.img = req['img']
+    user.local = req['local']
+    user.selfnote = req['selfnote']
+    user.nickname = req['nickname']
+    user.save()
+    res = {}
+    res['success'] = True
+    return HttpResponse(json.dumps(res))
+
+
+def get_rating_list(request):  # 获取用户评分记录，即浏览记录
+    userid = request.GET['userid']
+    res = {}
+    if cache.has_key('ratinghistory' + str(userid)):
+        ratings = cache.get('ratinghistory' + str(userid))
+    else:
+        ratings = list(Rating.objects.filter(userid=userid).order_by('-ratingtime').values())
+        for rating in ratings:
+            rating['moviename'] = Movie.objects.get(movieid=rating['movieid']).name
+        cache.set('ratinghistory' + str(userid), ratings, 60 * 60 * 24)
+    res['data'] = ratings
+    return HttpResponse(json.dumps(res))
+
+
+def get_comment_list(request):  # 获取用户评论记录
+    userid = request.GET['userid']
+    res = {}
+    if cache.has_key('commenthistory' + str(userid)):
+        comments = cache.get('commenthistory' + str(userid))
+    else:
+        comments = list(Comment.objects.filter(userid=userid).order_by('-commenttime').values())
+        for comment in comments:
+            comment['moviename'] = Movie.objects.get(movieid=comment['movieid']).name
+        cache.set('commenthistory' + str(userid), comments, 60 * 60 * 24)
+    res['data'] = comments
+    return HttpResponse(json.dumps(res))
+
+
+def delete_comment(request):  # 用户删除一条评论
+    commentid = request.GET['commentid']
+    comment = Comment.objects.get(commentid=commentid)  # 获取评论
+    movie = Movie.objects.get(movieid=comment.movieid)  # 获取评论相关联的电影
+    user = User.objects.get(userid=comment.userid)  # 获取评论相关联的用户
+    comment.delete()
+    if cache.has_key(movie.movieid):  # 删除缓存
+        cache.delete(movie.movieid)
+    comments = cache.get('commenthistory' + str(user.userid))  # 获取缓存准备更新
+    for comment in comments:
+        if str(comment['commentid']) == str(commentid):
+            comments.remove(comment)  # 移除删除的评论
+            break
+    cache.set('commenthistory' + str(user.userid), comments, 60 * 60 * 24)  # 重新设置缓存
+    res = {}
+    res['data'] = comments
+    cache.set('commentslen', int(cache.get('commentslen')) - 1, 60 * 60 * 24 * 365)
     return HttpResponse(json.dumps(res))
 
 
@@ -170,9 +309,10 @@ def get_high_score_movies(request):
     res = {}
     res['data'] = movies
     res['msg'] = '高评分电影'
-    res={}
-    res['data']=movies
+    res = {}
+    res['data'] = movies
     return HttpResponse(json.dumps(res))
+
 
 def get_persons(request):
     persons = list(Person.objects.order_by('personid').values()[:10])
@@ -181,7 +321,6 @@ def get_persons(request):
     return HttpResponse(json.dumps(res))
 
 
-# 未登录进行随机推荐
 def get_recom_movies_unlogin(request):
     movies = Movie.objects.all()
     ids = random.sample(range(0, len(movies)), 10)
@@ -189,14 +328,13 @@ def get_recom_movies_unlogin(request):
     data = []
     cur = 0
     for movie in movies:
-        if (cur in ids):  #获取10个随机电影加入结果
+        if (cur in ids):  # 获取10个随机电影加入结果
             data.append(model_to_dict(movie))
         cur += 1
     res['data'] = change_movies(data)
     return HttpResponse(json.dumps(res))
 
 
-# 对登录用户进行推荐
 def get_recom_movies(request):
     userid = request.GET['userid']
     user = User.objects.get(userid=userid)
@@ -204,16 +342,10 @@ def get_recom_movies(request):
     res = {}
     if user.watchitems != None:
         result1 = iter_recommend(userid)
-        # for key, value in result1.items():  # 将负的相似度全部加上一个偏移改成正值
-        #     result1[key] = (eval(value) + 1) * 0.5
-        # print(result1)
-        # print(result1)
         result2 = cbrec.recommend(userid)
-        # print(result2)
         for key, value in result1.items():
-            result1[key] = value *eval(result2[key])  # 将结果乘上内容推荐的偏执值
+            result1[key] = value * eval(result2[key])  # 将结果乘上内容推荐的偏执值
         ans = dict(sorted(result1.items(), key=operator.itemgetter(1), reverse=True))
-        # print(ans)
         ids = []
         for key in ans.keys():
             ids.append(key)
@@ -224,7 +356,7 @@ def get_recom_movies(request):
     else:
         movies = list(Movie.objects.order_by('-relesetime').values())
         res = {}
-        res['data'] =change_movies(movies[min(page * 10, len(movies) - 1):min(page * 10 + 10, len(movies) - 1)])
+        res['data'] = change_movies(movies[min(page * 10, len(movies) - 1):min(page * 10 + 10, len(movies) - 1)])
     return HttpResponse(json.dumps(res))
 
 
@@ -258,45 +390,28 @@ def get_movie_by_id(request):
     res['data'] = change_movie(movie)
     return HttpResponse(json.dumps(res))
 
-def cou_stay_time(request): #根据用户停留时间改变用户偏好度
-    startTime=request.GET['startTime']
-    endTime=request.GET['endTime']
-    userid=request.GET['userid']
-    if userid=='':
-        movieid=request.GET['movieid']
+
+def cou_stay_time(request):  # 根据用户停留时间改变用户偏好度
+    startTime = request.GET['startTime']
+    endTime = request.GET['endTime']
+    userid = request.GET['userid']
+    if userid != '':
+        movieid = request.GET['movieid']
         time.strptime(startTime, '%Y-%m-%d %H:%M:%S')
-        time1=time.mktime(time.strptime(startTime, '%Y-%m-%d %H:%M:%S'))
+        time1 = time.mktime(time.strptime(startTime, '%Y-%m-%d %H:%M:%S'))
         time.strptime(endTime, '%Y-%m-%d %H:%M:%S')
         time2 = time.mktime(time.strptime(endTime, '%Y-%m-%d %H:%M:%S'))
-        if (time2-time1)>=60:
-            rating=5
+        if (time2 - time1) >= 60:
+            rating = 5
         else:
-            rating=(time2-time1)/60.0*5
+            rating = (time2 - time1) / 60.0 * 5
         now_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if not StayRating.objects.filter(movieid=movieid,userid=userid).exists():
-            movieRating=StayRating(movieid=movieid,rating=rating,ratingtime=str(now_time),userid=userid)
-            movieRating.save()
-        else:
-            movieRating=StayRating.objects.filter(movieid=movieid,userid=userid)[0]
-            movieRating.rating = rating
-            movieRating.ratingtime=str(now_time)
-            movieRating.save()
+        movieRating = StayRating(movieid=movieid, rating=rating, ratingtime=str(now_time), userid=userid)
+        movieRating.save()
         cbrec.prepare_user_profile(userid)
         cbrec.cosUI(userid)
     res = {}
     res['success'] = True
-    return HttpResponse(json.dumps(res))
-
-def get_person_by_id(request):
-    res = {}
-    person = model_to_dict(Person.objects.get(personid=request.GET['id']))
-    parMovies = []
-    person['imgfile']=None
-    movies = Movie.objects.filter(Q(actors__icontains=person['name']) | Q(director__icontains=person['name']))
-    for movie in movies:
-        parMovies.append(movie.movieid)
-    person['parMovies'] = parMovies
-    res['data'] = person
     return HttpResponse(json.dumps(res))
 
 
@@ -338,7 +453,7 @@ def submit_rating(request):  # 提交用户评分
     cbrec.prepare_user_profile(userid)
     cbrec.cosUI(userid)
     movie.all_score += int(ratingvalue)
-    movie.score = round(movie.all_score / movie.vote,1)
+    movie.score = round(movie.all_score / movie.vote, 1)
     movie.save()
     return HttpResponse("成功")
 
@@ -354,55 +469,20 @@ def submit_comment(request):
         cache.delete(movieid)
     if cache.has_key('commenthistory' + str(userid)):
         cache.delete('commenthistory' + str(userid))  # 删除缓存
-    cache.set('commentslen', int(cache.get('commentslen')) + 1,60*60*24*365)
+    cache.set('commentslen', int(cache.get('commentslen')) + 1, 60 * 60 * 24 * 365)
     return HttpResponse("hello")
 
 
-def get_rating_list(request):  # 获取用户评分记录，即浏览记录
-    userid = request.GET['userid']
+def get_person_by_id(request):
     res = {}
-    if cache.has_key('ratinghistory' + str(userid)):
-        ratings = cache.get('ratinghistory' + str(userid))
-    else:
-        ratings = list(Rating.objects.filter(userid=userid).order_by('-ratingtime').values())
-        for rating in ratings:
-            rating['moviename'] = Movie.objects.get(movieid=rating['movieid']).name
-        cache.set('ratinghistory' + str(userid), ratings,60*60*24)
-    res['data'] = ratings
-    return HttpResponse(json.dumps(res))
-
-
-def get_comment_list(request):  # 获取用户评论记录
-    userid = request.GET['userid']
-    res = {}
-    if cache.has_key('commenthistory' + str(userid)):
-        comments = cache.get('commenthistory' + str(userid))
-    else:
-        comments = list(Comment.objects.filter(userid=userid).order_by('-commenttime').values())
-        for comment in comments:
-            comment['moviename'] = Movie.objects.get(movieid=comment['movieid']).name
-        cache.set('commenthistory' + str(userid), comments,60*60*24)
-    res['data'] = comments
-    return HttpResponse(json.dumps(res))
-
-
-def delete_comment(request):  # 用户删除一条评论
-    commentid = request.GET['commentid']
-    comment = Comment.objects.get(commentid=commentid)  # 获取评论
-    movie = Movie.objects.get(movieid=comment.movieid)  # 获取评论相关联的电影
-    user = User.objects.get(userid=comment.userid)  # 获取评论相关联的用户
-    comment.delete()
-    if cache.has_key(movie.movieid):  # 删除缓存
-        cache.delete(movie.movieid)
-    comments = cache.get('commenthistory' + str(user.userid))  # 获取缓存准备更新
-    for comment in comments:
-        if str(comment['commentid']) == str(commentid):
-            comments.remove(comment)  # 移除删除的评论
-            break
-    cache.set('commenthistory' + str(user.userid), comments,60*60*24)  # 重新设置缓存
-    res = {}
-    res['data'] = comments
-    cache.set('commentslen', int(cache.get('commentslen')) - 1,60*60*24*365)
+    person = model_to_dict(Person.objects.get(personid=request.GET['id']))
+    parMovies = []
+    person['imgfile'] = None
+    movies = Movie.objects.filter(Q(actors__icontains=person['name']) | Q(director__icontains=person['name']))
+    for movie in movies:
+        parMovies.append(movie.movieid)
+    person['parMovies'] = parMovies
+    res['data'] = person
     return HttpResponse(json.dumps(res))
 
 
@@ -428,6 +508,15 @@ def searches_movies(request):
         res['error'] = '无符合条件的数据!'
     else:
         res['data'] = data
+    return HttpResponse(json.dumps(res))
+
+
+def del_collect_movie(request):
+    favoriteid = request.GET['favoriteid']
+    movieid = request.GET["movieid"]
+    CollectMovie.objects.filter(favoriteid=favoriteid, movieid=movieid).delete()
+    StayRating.objects.filter(movieid=movieid,favoriteid=favoriteid).delete()
+    res = {}
     return HttpResponse(json.dumps(res))
 
 
@@ -472,37 +561,10 @@ def searches_person_by_keyword(request):
     return HttpResponse(json.dumps(res))
 
 
-def update_password(request):
-    user = User.objects.filter(username=request.GET['username'], password=request.GET['oldPassword'])
-    data = {}
-    if (not user.exists()):
-        data['success'] = False
-        data['error'] = '原密码错误!'
-    else:
-        data['success'] = True
-        user = user[0]
-        user.password = request.GET['newPassword']
-        user.save()
-    return HttpResponse(json.dumps(data))
-
-
 def get_movie_name_and_img_by_id(request):
     movie = model_to_dict(Movie.objects.get(movieid=request.GET['id']))
     res = {}
     res['data'] = change_movie(movie)
-    return HttpResponse(json.dumps(res))
-
-
-def update_user_profile(request):
-    req = json.loads(request.body)
-    user = User.objects.get(userid=req['userid'])
-    user.img = req['img']
-    user.local = req['local']
-    user.selfnote = req['selfnote']
-    user.nickname = req['nickname']
-    user.save()
-    res = {}
-    res['success'] = True
     return HttpResponse(json.dumps(res))
 
 
@@ -538,18 +600,25 @@ def cou_sim_mutex():
     itemBasedCF.data_transfer()
     itemBasedCF.similarity()
 
+
 def change_movie(movie):
     movie['imgfile'] = None
-    movie['genreids'] = None
-    movie['persons'] = None
     return movie
+
 
 def change_movies(movies):
     for movie in movies:
         movie['imgfile'] = None
-        movie['genreids'] = None
-        movie['persons'] = None
     return movies
 
-def cou_user_movie_feature():
+
+def has_key(request):
+    pass
+
+
+def get(request):
+    pass
+
+
+def set(request):
     pass

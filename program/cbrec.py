@@ -46,7 +46,6 @@ class CBRec():
             preference += str(genre.id) + ':' + str(result) + '/'
         user.preference = preference
         user.save()
-
     def prepare_movie_feature(self, movieid):
         movie = Movie.objects.get(movieid=movieid)
         if movie.genre != None:
@@ -62,7 +61,6 @@ class CBRec():
                 feature += str(genre.id) + ':' + str(0) + '/'
         movie.feature = feature
         movie.save()
-
     def cou_all_user_feature(self):
         users = User.objects.all()
         ratings = Rating.objects.all()
@@ -101,7 +99,6 @@ class CBRec():
                 li.extend([str(genre.id), ':', str(result), '/'])
             user.preference = preference.join(li)
             user.save()
-
     def cosUI(self, userid):
         user = User.objects.get(userid=userid)
         userpre = [eval(x.split(':')[1]) for x in user.preference.split('/')[:-1]]
@@ -126,14 +123,12 @@ class CBRec():
         userpreference = UserPreference.objects.get(userid=userid)
         userpreference.userpre = ans
         userpreference.save()
-
     def recommend(self, userid):
         result = [x.split(':') for x in UserPreference.objects.get(userid=userid).userpre.split('/')][:-1]
         ans = {}  # 存储推荐结果，字典形式
         for x in result:
             ans[x[0]] = x[1]  # 转化为字典结果
         return ans
-
     def cou_all_ui(self):  # 计算所有用户的偏好
         print(1)
         userpres = [x for x in UserPreference.objects.all()]
@@ -176,3 +171,9 @@ class CBRec():
                 li.extend([str(key), ':', str(value), '/'])
             userpre.userpre = ans.join(li)
             userpre.save()
+
+
+
+
+
+
